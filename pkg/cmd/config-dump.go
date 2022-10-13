@@ -84,7 +84,7 @@ func dumpConfig(opts *configDumpOpts) error {
 	// This merges the provided manifest with the Terraform output, defaults
 	// the merged manifest, converts it to the internal representations, and
 	// then validates it.
-	cluster, err := config.LoadKubeOneCluster(opts.ManifestFile, opts.TerraformState, opts.CredentialsFile, logger)
+	cluster, err := config.LoadKubeOneCluster(opts.ManifestFile, opts.TerraformState, opts.MachineControllerState, opts.CredentialsFile, logger)
 	if err != nil {
 		return err
 	}

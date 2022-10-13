@@ -33,6 +33,7 @@ import (
 	kubeonevalidation "k8c.io/kubeone/pkg/apis/kubeone/validation"
 	"k8c.io/kubeone/pkg/containerruntime"
 	"k8c.io/kubeone/pkg/fail"
+	terraformmcv1beta2 "k8c.io/kubeone/pkg/terraform/mcv1beta2"
 	terraformv1beta1 "k8c.io/kubeone/pkg/terraform/v1beta1"
 	terraformv1beta2 "k8c.io/kubeone/pkg/terraform/v1beta2"
 
@@ -60,7 +61,7 @@ var (
 
 // LoadKubeOneCluster returns the internal representation of the KubeOneCluster object
 // parsed from the versioned KubeOneCluster manifest, Terraform output and credentials file
-func LoadKubeOneCluster(clusterCfgPath, tfOutputPath, credentialsFilePath string, logger logrus.FieldLogger) (*kubeoneapi.KubeOneCluster, error) {
+func LoadKubeOneCluster(clusterCfgPath, tfOutputPath, mcOutputPath, credentialsFilePath string, logger logrus.FieldLogger) (*kubeoneapi.KubeOneCluster, error) {
 	if len(clusterCfgPath) == 0 {
 		return nil, fail.Runtime(fmt.Errorf("is not provided"), "cluster configuration path")
 	}
@@ -89,6 +90,13 @@ func LoadKubeOneCluster(clusterCfgPath, tfOutputPath, credentialsFilePath string
 		}
 	}
 
+	var mcOutput []byte
+	if mcOutputPath != "" {
+		if mcOutput, err = os.ReadFile(mcOutputPath); err != nil {
+			return nil, fail.Runtime(err, "reading machine-controller output file")
+		}
+	}
+
 	var credentialsFile []byte
 	if len(credentialsFilePath) != 0 {
 		credentialsFile, err = os.ReadFile(credentialsFilePath)
@@ -97,11 +105,11 @@ func LoadKubeOneCluster(clusterCfgPath, tfOutputPath, credentialsFilePath string
 		}
 	}
 
-	return BytesToKubeOneCluster(cluster, tfOutput, credentialsFile, logger)
+	return BytesToKubeOneCluster(cluster, tfOutput, mcOutput, credentialsFile, logger)
 }
 
 // BytesToKubeOneCluster parses the bytes of the versioned KubeOneCluster manifests
-func BytesToKubeOneCluster(cluster, tfOutput, credentialsFile []byte, logger logrus.FieldLogger) (*kubeoneapi.KubeOneCluster, error) {
+func BytesToKubeOneCluster(cluster, tfOutput, mcOutput, credentialsFile []byte, logger logrus.FieldLogger) (*kubeoneapi.KubeOneCluster, error) {
 	// Get the GVK from the given KubeOneCluster manifest
 	typeMeta := runtime.TypeMeta{}
 	if err := yaml.Unmarshal(cluster, &typeMeta); err != nil {
@@ -135,7 +143,7 @@ func BytesToKubeOneCluster(cluster, tfOutput, credentialsFile []byte, logger log
 			return nil, fail.Config(err, fmt.Sprintf("decoding %s", v1beta2Cluster.GroupVersionKind()))
 		}
 
-		return DefaultedV1Beta2KubeOneCluster(v1beta2Cluster, tfOutput, credentialsFile, logger)
+		return DefaultedV1Beta2KubeOneCluster(v1beta2Cluster, tfOutput, mcOutput, credentialsFile, logger)
 	default:
 		return nil, fail.Config(fmt.Errorf("invalid api version %q", typeMeta.APIVersion), "api version")
 	}
@@ -193,8 +201,16 @@ func DefaultedV1Beta1KubeOneCluster(versionedCluster *kubeonev1beta1.KubeOneClus
 // DefaultedV1Beta2KubeOneCluster converts a v1beta2 KubeOneCluster object to an internal representation of KubeOneCluster
 // object while sourcing information from Terraform output, applying default values and validating the KubeOneCluster
 // object
-func DefaultedV1Beta2KubeOneCluster(versionedCluster *kubeonev1beta2.KubeOneCluster, tfOutput, credentialsFile []byte, logger logrus.FieldLogger) (*kubeoneapi.KubeOneCluster, error) {
-	if tfOutput != nil {
+func DefaultedV1Beta2KubeOneCluster(versionedCluster *kubeonev1beta2.KubeOneCluster, tfOutput, mcOutput, credentialsFile []byte, logger logrus.FieldLogger) (*kubeoneapi.KubeOneCluster, error) {
+	if mcOutput != nil && tfOutput != nil {
+		tfmcConfig, err := terraformmcv1beta2.NewConfigFromJSON(tfOutput, mcOutput)
+		if err != nil {
+			return nil, err
+		}
+		if err := tfmcConfig.Apply(versionedCluster); err != nil {
+			return nil, err
+		}
+	} else if tfOutput != nil {
 		tfConfig, err := terraformv1beta2.NewConfigFromJSON(tfOutput)
 		if err != nil {
 			return nil, err

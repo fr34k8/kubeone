@@ -97,6 +97,12 @@ func newRoot() *cobra.Command {
 		"",
 		"Source for terraform output in JSON - to read from stdin. If path is a file, contents will be used. If path is a dictionary, `terraform output -json` is executed in this path")
 
+	fs.StringVarP(&opts.MachineControllerState,
+		longFlagName(opts, "MachineControllerState"),
+		"",
+		"",
+		"Source for machine-controller output in JSON")
+
 	fs.StringVarP(&opts.CredentialsFile,
 		longFlagName(opts, "CredentialsFile"),
 		shortFlagName(opts, "CredentialsFile"),

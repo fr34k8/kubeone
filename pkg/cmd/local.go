@@ -65,7 +65,7 @@ func (opts *localOpts) BuildState() (*state.State, error) {
 	}
 
 	if haveManifest {
-		cluster, err = loadClusterConfig(opts.ManifestFile, "", "", logger)
+		cluster, err = loadClusterConfig(opts.ManifestFile, "", "", "", logger)
 		if err != nil {
 			return nil, err
 		}
@@ -243,7 +243,7 @@ func generateLocalCluster(logger logrus.FieldLogger, kubeVersion, apiEndpoint st
 
 	kubeonev1beta2.SetObjectDefaults_KubeOneCluster(cls)
 
-	internalCluster, err := config.DefaultedV1Beta2KubeOneCluster(cls, nil, nil, logger)
+	internalCluster, err := config.DefaultedV1Beta2KubeOneCluster(cls, nil, nil, nil, logger)
 	if err != nil {
 		// this should never happen
 		panic(err)

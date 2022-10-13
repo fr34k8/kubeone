@@ -47,12 +47,13 @@ var (
 const yes = "yes"
 
 type globalOptions struct {
-	ManifestFile    string `longflag:"manifest" shortflag:"m"`
-	TerraformState  string `longflag:"tfjson" shortflag:"t"`
-	CredentialsFile string `longflag:"credentials" shortflag:"c"`
-	Verbose         bool   `longflag:"verbose" shortflag:"v"`
-	Debug           bool   `longflag:"debug" shortflag:"d"`
-	LogFormat       string `longflag:"log-format" shortflag:"l"`
+	ManifestFile           string `longflag:"manifest" shortflag:"m"`
+	TerraformState         string `longflag:"tfjson" shortflag:"t"`
+	MachineControllerState string `longflag:"mcjson"`
+	CredentialsFile        string `longflag:"credentials" shortflag:"c"`
+	Verbose                bool   `longflag:"verbose" shortflag:"v"`
+	Debug                  bool   `longflag:"debug" shortflag:"d"`
+	LogFormat              string `longflag:"log-format" shortflag:"l"`
 }
 
 func (opts *globalOptions) BuildState() (*state.State, error) {
@@ -64,7 +65,7 @@ func (opts *globalOptions) BuildState() (*state.State, error) {
 
 	s.Logger = newLogger(opts.Verbose, opts.LogFormat)
 
-	cluster, err := loadClusterConfig(opts.ManifestFile, opts.TerraformState, opts.CredentialsFile, s.Logger)
+	cluster, err := loadClusterConfig(opts.ManifestFile, opts.TerraformState, opts.MachineControllerState, opts.CredentialsFile, s.Logger)
 	if err != nil {
 		return nil, err
 	}
@@ -136,6 +137,12 @@ func persistentGlobalOptions(fs *pflag.FlagSet) (*globalOptions, error) {
 	}
 	gf.TerraformState = tfjson
 
+	mcjson, err := fs.GetString(longFlagName(gf, "MachineControllerState"))
+	if err != nil {
+		return nil, fail.Runtime(err, "getting global flags")
+	}
+	gf.MachineControllerState = mcjson
+
 	creds, err := fs.GetString(longFlagName(gf, "CredentialsFile"))
 	if err != nil {
 		return nil, fail.Runtime(err, "getting global flags")
@@ -171,8 +178,8 @@ func newLogger(verbose bool, format string) *logrus.Logger {
 	return logger
 }
 
-func loadClusterConfig(filename, terraformOutputPath, credentialsFilePath string, logger logrus.FieldLogger) (*kubeoneapi.KubeOneCluster, error) {
-	cls, err := config.LoadKubeOneCluster(filename, terraformOutputPath, credentialsFilePath, logger)
+func loadClusterConfig(filename, terraformOutputPath, mcOutputPath, credentialsFilePath string, logger logrus.FieldLogger) (*kubeoneapi.KubeOneCluster, error) {
+	cls, err := config.LoadKubeOneCluster(filename, terraformOutputPath, mcOutputPath, credentialsFilePath, logger)
 	if err != nil {
 		return nil, err
 	}
