@@ -67,7 +67,7 @@ type TerraformConfig struct {
 
 // MachineControllerConfig represents configuration in the machine-controller output format
 type MachineControllerConfig struct {
-	ControlPlaneMachines []hostsSpec `json:"control_plane_machines"`
+	ControlPlaneMachines []hostsSpec `json:"machines"`
 	Bastion              *hostsSpec  `json:"bastion"`
 }
 
@@ -186,7 +186,7 @@ func NewConfigFromJSON(tf, mc []byte) (*Config, error) {
 	}
 
 	wholeMCOutput := struct {
-		ControlPlaneMachines interface{} `json:"control_plane_machines"`
+		ControlPlaneMachines interface{} `json:"machines"`
 		Bastion              interface{} `json:"bastion"`
 	}{}
 
