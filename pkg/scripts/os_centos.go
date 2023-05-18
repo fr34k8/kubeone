@@ -44,6 +44,17 @@ echo -n "${yum_proxy}" >> /tmp/yum.conf
 sudo mv /tmp/yum.conf /etc/yum.conf
 
 {{ if .CONFIGURE_REPOSITORIES }}
+{{- if .USE_OBS }}
+cat <<EOF | sudo tee /etc/yum.repos.d/kubernetes.repo
+[kubernetes]
+name=Kubernetes
+type=rpm-md
+baseurl=https://download.opensuse.org/repositories/isv:/kubernetes:/core:/stable:/v{{ .OBS_VERSION }}:/rpm_stream/
+gpgcheck=1
+gpgkey=https://download.opensuse.org/repositories/isv:/kubernetes:/core:/stable:/v{{ .OBS_VERSION}}:/rpm_stream/repodata/repomd.xml.key
+enabled=1
+EOF
+{{ else }}
 cat <<EOF | sudo tee /etc/yum.repos.d/kubernetes.repo
 [kubernetes]
 name=Kubernetes
@@ -59,6 +70,7 @@ if [ "$ID" == "centos" ] && [ "$VERSION_ID" == "8" ]; then
 	sudo sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-*
 	sudo sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-*
 fi
+{{- end }}
 {{ end }}
 
 sudo yum install -y \
@@ -152,6 +164,8 @@ func KubeadmCentOS(cluster *kubeoneapi.KubeOneCluster, force bool) (string, erro
 		"INSTALL_CONTAINERD":     cluster.ContainerRuntime.Containerd,
 		"INSTALL_ISCSI_AND_NFS":  installISCSIAndNFS(cluster),
 		"CILIUM":                 ciliumCNI(cluster),
+		"USE_OBS":                kubeoneapi.IsOpenBuildServiceEnabled(),
+		"OBS_VERSION":            cluster.Versions.KubernetesMajorMinorVersion(),
 	}
 
 	if err := containerruntime.UpdateDataMap(cluster, data); err != nil {
@@ -187,6 +201,8 @@ func UpgradeKubeadmAndCNICentOS(cluster *kubeoneapi.KubeOneCluster) (string, err
 		"INSTALL_CONTAINERD":     cluster.ContainerRuntime.Containerd,
 		"INSTALL_ISCSI_AND_NFS":  installISCSIAndNFS(cluster),
 		"CILIUM":                 ciliumCNI(cluster),
+		"USE_OBS":                kubeoneapi.IsOpenBuildServiceEnabled(),
+		"OBS_VERSION":            cluster.Versions.KubernetesMajorMinorVersion(),
 	}
 
 	if err := containerruntime.UpdateDataMap(cluster, data); err != nil {
@@ -217,6 +233,8 @@ func UpgradeKubeletAndKubectlCentOS(cluster *kubeoneapi.KubeOneCluster) (string,
 		"INSTALL_CONTAINERD":     cluster.ContainerRuntime.Containerd,
 		"INSTALL_ISCSI_AND_NFS":  installISCSIAndNFS(cluster),
 		"CILIUM":                 ciliumCNI(cluster),
+		"USE_OBS":                kubeoneapi.IsOpenBuildServiceEnabled(),
+		"OBS_VERSION":            cluster.Versions.KubernetesMajorMinorVersion(),
 	}
 
 	if err := containerruntime.UpdateDataMap(cluster, data); err != nil {

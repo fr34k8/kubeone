@@ -44,6 +44,17 @@ echo -n "${yum_proxy}" >> /tmp/yum.conf
 sudo mv /tmp/yum.conf /etc/yum.conf
 
 {{ if .CONFIGURE_REPOSITORIES }}
+{{- if .USE_OBS }}
+cat <<EOF | sudo tee /etc/yum.repos.d/kubernetes.repo
+[kubernetes]
+name=Kubernetes
+type=rpm-md
+baseurl=https://download.opensuse.org/repositories/isv:/kubernetes:/core:/stable:/v{{ .OBS_VERSION }}:/rpm_stream/
+gpgcheck=1
+gpgkey=https://download.opensuse.org/repositories/isv:/kubernetes:/core:/stable:/v{{ .OBS_VERSION}}:/rpm_stream/repodata/repomd.xml.key
+enabled=1
+EOF
+{{ else }}
 cat <<EOF | sudo tee /etc/yum.repos.d/kubernetes.repo
 [kubernetes]
 name=Kubernetes
@@ -53,6 +64,7 @@ gpgcheck=1
 repo_gpgcheck=0
 gpgkey=https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
 EOF
+{{- end }}
 {{ end }}
 
 sudo yum install -y \
@@ -214,6 +226,8 @@ func KubeadmAmazonLinux(cluster *kubeoneapi.KubeOneCluster, force bool) (string,
 		"INSTALL_CONTAINERD":     cluster.ContainerRuntime.Containerd,
 		"USE_KUBERNETES_REPO":    cluster.AssetConfiguration.NodeBinaries.URL == "",
 		"CILIUM":                 ciliumCNI(cluster),
+		"USE_OBS":                kubeoneapi.IsOpenBuildServiceEnabled(),
+		"OBS_VERSION":            cluster.Versions.KubernetesMajorMinorVersion(),
 	}
 
 	if err := containerruntime.UpdateDataMap(cluster, data); err != nil {
@@ -251,6 +265,8 @@ func UpgradeKubeadmAndCNIAmazonLinux(cluster *kubeoneapi.KubeOneCluster) (string
 		"INSTALL_CONTAINERD":     cluster.ContainerRuntime.Containerd,
 		"USE_KUBERNETES_REPO":    cluster.AssetConfiguration.NodeBinaries.URL == "",
 		"CILIUM":                 ciliumCNI(cluster),
+		"USE_OBS":                kubeoneapi.IsOpenBuildServiceEnabled(),
+		"OBS_VERSION":            cluster.Versions.KubernetesMajorMinorVersion(),
 	}
 
 	if err := containerruntime.UpdateDataMap(cluster, data); err != nil {
@@ -283,6 +299,8 @@ func UpgradeKubeletAndKubectlAmazonLinux(cluster *kubeoneapi.KubeOneCluster) (st
 		"INSTALL_CONTAINERD":     cluster.ContainerRuntime.Containerd,
 		"USE_KUBERNETES_REPO":    cluster.AssetConfiguration.NodeBinaries.URL == "",
 		"CILIUM":                 ciliumCNI(cluster),
+		"USE_OBS":                kubeoneapi.IsOpenBuildServiceEnabled(),
+		"OBS_VERSION":            cluster.Versions.KubernetesMajorMinorVersion(),
 	}
 
 	if err := containerruntime.UpdateDataMap(cluster, data); err != nil {

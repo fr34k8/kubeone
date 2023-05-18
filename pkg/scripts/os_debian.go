@@ -61,12 +61,17 @@ sudo systemctl enable --now iscsid
 {{- end }}
 
 {{- if .CONFIGURE_REPOSITORIES }}
+{{- if .USE_OBS }}
+echo 'deb http://download.opensuse.org/repositories/isv:/kubernetes:/core:/stable:/v{{ .OBS_VERSION }}/deb/ /' | sudo tee /etc/apt/sources.list.d/isv:kubernetes:core:stable:v{{ .OBS_VERSION }}.list
+
+curl -fsSL https://download.opensuse.org/repositories/isv:kubernetes:core:stable:v{{ .OBS_VERSION }}/deb/Release.key | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/isv_kubernetes_core_stable_v{{ .OBS_VERSION }}.gpg > /dev/null
+{{- else }}
 curl -fsSL https://dl.k8s.io/apt/doc/apt-key.gpg | sudo apt-key add -
 
 # You'd think that kubernetes-$(lsb_release -sc) belongs there instead, but the debian repo
 # contains neither kubeadm nor kubelet, and the docs themselves suggest using xenial repo.
 echo "deb http://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
-
+{{ end }}
 sudo apt-get update
 {{- end }}
 
@@ -144,6 +149,8 @@ func KubeadmDebian(cluster *kubeoneapi.KubeOneCluster, force bool) (string, erro
 		"INSTALL_CONTAINERD":     cluster.ContainerRuntime.Containerd,
 		"INSTALL_ISCSI_AND_NFS":  installISCSIAndNFS(cluster),
 		"CILIUM":                 ciliumCNI(cluster),
+		"USE_OBS":                kubeoneapi.IsOpenBuildServiceEnabled(),
+		"OBS_VERSION":            cluster.Versions.KubernetesMajorMinorVersion(),
 	}
 
 	if err := containerruntime.UpdateDataMap(cluster, data); err != nil {
@@ -175,6 +182,8 @@ func UpgradeKubeadmAndCNIDebian(cluster *kubeoneapi.KubeOneCluster) (string, err
 		"INSTALL_CONTAINERD":     cluster.ContainerRuntime.Containerd,
 		"INSTALL_ISCSI_AND_NFS":  installISCSIAndNFS(cluster),
 		"CILIUM":                 ciliumCNI(cluster),
+		"USE_OBS":                kubeoneapi.IsOpenBuildServiceEnabled(),
+		"OBS_VERSION":            cluster.Versions.KubernetesMajorMinorVersion(),
 	}
 
 	if err := containerruntime.UpdateDataMap(cluster, data); err != nil {
@@ -201,6 +210,8 @@ func UpgradeKubeletAndKubectlDebian(cluster *kubeoneapi.KubeOneCluster) (string,
 		"INSTALL_CONTAINERD":     cluster.ContainerRuntime.Containerd,
 		"INSTALL_ISCSI_AND_NFS":  installISCSIAndNFS(cluster),
 		"CILIUM":                 ciliumCNI(cluster),
+		"USE_OBS":                kubeoneapi.IsOpenBuildServiceEnabled(),
+		"OBS_VERSION":            cluster.Versions.KubernetesMajorMinorVersion(),
 	}
 
 	if err := containerruntime.UpdateDataMap(cluster, data); err != nil {
