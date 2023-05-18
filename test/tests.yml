@@ -73,6 +73,11 @@
     - name: vsphere_centos
     - name: vsphere_flatcar
 
+- scenario: install_containerd
+  initVersion: v1.26.5
+  infrastructures:
+    - name: aws_default_obs
+
 - scenario: upgrade_containerd
   initVersion: v1.25.6
   upgradedVersion: v1.26.1

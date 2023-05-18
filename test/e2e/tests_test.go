@@ -550,6 +550,15 @@ func TestVsphereFlatcarInstallContainerdV1_26_1(t *testing.T) {
 	scenario.Run(ctx, t)
 }
 
+func TestAwsDefaultObsInstallContainerdV1_26_5(t *testing.T) {
+	ctx := NewSignalContext()
+	infra := Infrastructures["aws_default_obs"]
+	scenario := Scenarios["install_containerd"]
+	scenario.SetInfra(infra)
+	scenario.SetVersions("v1.26.5")
+	scenario.Run(ctx, t)
+}
+
 func TestAwsAmznStableUpgradeContainerdFromV1_25_6_ToV1_26_1(t *testing.T) {
 	ctx := NewSignalContext()
 	infra := Infrastructures["aws_amzn_stable"]
